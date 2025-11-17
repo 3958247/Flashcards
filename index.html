@@ -843,7 +843,19 @@
             if (parts.length >= 2) {
                 const front = parts[0].trim();
                 const back = parts[1].trim();
-                const id = btoa(front + back);
+                
+                const normalize = str => str.replace(/[^a-z0-9]/gi, '').toLowerCase();
+                const hash32 = str => {
+                    let h = 0x811c9dc5;
+                    for (let i = 0; i < str.length; i++) {
+                        h ^= str.charCodeAt(i);
+                        h = (h >>> 0) * 0x01000193;
+                    }
+                    return (h >>> 0).toString(36);   // base-36 = shortest alphanumeric
+                };
+                const normalized = normalize(front) + normalize(back);
+                
+                const id = hash32(normalized);
                 
                 return {
                     front: front,
