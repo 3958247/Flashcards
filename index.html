@@ -841,10 +841,14 @@
             }
             
             if (parts.length >= 2) {
+                const front = parts[0].trim();
+                const back = parts[1].trim();
+                const id = btoa(front + back);
+                
                 return {
-                    front: parts[0].trim(),
-                    back: parts[1].trim(),
-                    id: index
+                    front: front,
+                    back: back,
+                    id: id
                 };
             }
             return null;
