@@ -989,7 +989,7 @@
         do {
             currentIndex = (currentIndex + 1) % cards.length;
             attempts++;
-        } while (isKnown() && knownCards.size !== cards.length && attempts <= cards.length);
+        } while (isKnown() && cards.filter(card => !knownCards.has(card.id)).length !== 0 && attempts <= cards.length);
         isFlipped = false;
         updateCard();
         localStorage.setItem('currentIndex', currentIndex);
