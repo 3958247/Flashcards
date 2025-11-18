@@ -800,6 +800,7 @@
         </div>
     </main>
         <script>
+        let cards = [];
         let currentIndex = 0;
         let isFlipped = false;
         let knownCards = new Set();
@@ -828,42 +829,35 @@
     // Parse cards from input
     function parseCards(text) {
         const lines = text.split('\n').filter(line => line.trim());
-        return lines.map((line, index) => {
+        const seenIds = new Set();
+        return lines.map(line => {
             let parts;
-            if (line.includes('|')) {
-                parts = line.split('|');
-            } else if (line.includes('\t')) {
-                parts = line.split('\t');
-            } else if (line.includes(',')) {
-                parts = line.split(',');
-            } else {
-                return null;
-            }
-            
-            if (parts.length >= 2) {
-                const front = parts[0].trim();
-                const back = parts[1].trim();
-                
-                const normalize = str => str.replace(/[^a-z0-9]/gi, '').toLowerCase();
-                const hash32 = str => {
-                    let h = 0x811c9dc5;
-                    for (let i = 0; i < str.length; i++) {
-                        h ^= str.charCodeAt(i);
-                        h = (h >>> 0) * 0x01000193;
-                    }
-                    return (h >>> 0).toString(36);   // base-36 = shortest alphanumeric
-                };
-                const normalized = normalize(front) + normalize(back);
-                
-                const id = hash32(normalized);
-                
-                return {
-                    front: front,
-                    back: back,
-                    id: id
-                };
-            }
-            return null;
+            if (line.includes('|')) parts = line.split('|');
+            else if (line.includes('\t')) parts = line.split('\t');
+            else if (line.includes(',')) parts = line.split(',');
+            else return null;
+    
+            if (parts.length < 2) return null;
+    
+            const front = parts[0].trim();
+            const back = parts[1].trim();
+    
+            const normalize = str => str.replace(/[^a-z0-9]/gi, '').toLowerCase();
+            const hash32 = str => {
+                let h = 0x811c9dc5;
+                for (let i = 0; i < str.length; i++) {
+                    h ^= str.charCodeAt(i);
+                    h = (h >>> 0) * 0x01000193;
+                }
+                return (h >>> 0).toString(36);
+            };
+    
+            const id = hash32(normalize(front) + normalize(back));
+    
+            if (seenIds.has(id)) return null;  // skip duplicate
+            seenIds.add(id);
+    
+            return { front, back, id };
         }).filter(Boolean);
     }
 
@@ -952,7 +946,7 @@
         document.getElementById('progressFill').style.width = progress + '%';
         document.getElementById('progressText').textContent = `Card ${currentIndex + 1} of ${cards.length}`;
         
-        const unknownCount = cards.length - knownCards.size;
+        const unknownCount = cards.filter(card => !knownCards.has(card.id)).length;
         document.getElementById('remainingText').textContent = `${unknownCount} remaining to learn`;
         
         const flashcard = document.getElementById('flashcard');
@@ -991,20 +985,14 @@
 
     // Navigation
     function nextCard() {
-        if (currentIndex < cards.length - 1) {
-            currentIndex++;
-            localStorage.setItem('currentIndex', currentIndex);
-            isFlipped = false;
-            updateCard();
-        } else {
-            currentIndex = 0;
-            localStorage.setItem('currentIndex', currentIndex);
-            isFlipped = false;
-            updateCard();
-        }
-        if (isKnown() && knownCards.size !== cards.length) {
-            nextCard();
-        }
+        let attempts = 0;
+        do {
+            currentIndex = (currentIndex + 1) % cards.length;
+            attempts++;
+        } while (isKnown() && knownCards.size !== cards.length && attempts <= cards.length);
+        isFlipped = false;
+        updateCard();
+        localStorage.setItem('currentIndex', currentIndex);
     }
 
     function prevCard() {
